@@ -195,11 +195,12 @@ _finish_from_develop() {
 				# creating merge request from the release branch because nobackmerge
 				git_do commit --allow-empty -m "backporting to develop from $BRANCH"
 				git_do push -o merge_request.create  -o merge_request.target="$DEVELOP_BRANCH" "$ORIGIN" "$BRANCH"
-				echo "Finish by creating a merge request to develop."
+				echo "Finish by creating a merge request to develop (backmerging)."
 				echo "Keeping branches until merge request approuved."
 				echo "Commit in '$BRANCH' to update the merge resquest"
 				echo "After merge request approuval, use 'git flow finish'"
-				echo " (wihtout -M) and 'git pull' to really finish the feature"
+				echo " (wihtout -M) and 'git pull' to really finish the release"
+				exit 4
 			    else
 				commit="$BRANCH"
 				if noflag squash; then
