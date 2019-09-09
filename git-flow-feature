@@ -395,6 +395,7 @@ M,mergereq	       Do not merge feature but make a merge request
 	    echo "Commit in '$BRANCH' to update the merge resquest"
 	    echo "After merge request approuval, use 'git flow finish'"
 	    echo " (wihtout -M) and 'git pull' to really finish the feature"
+	    exit 4
 	else
 
 	   # Merge into BASE
