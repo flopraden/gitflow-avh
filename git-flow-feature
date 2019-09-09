@@ -236,7 +236,7 @@ F,[no]fetch      Fetch from origin before performing local operation
 
 cmd_finish() {
 	OPTIONS_SPEC="\
-git flow feature finish [-m] [-h] [-F] [-r] [-p] [-k] [-D] [-S] [--no-ff] <name|nameprefix>
+git flow feature finish [-M] [-h] [-F] [-r] [-p] [-k] [-D] [-S] [--no-ff] <name|nameprefix>
 
 Finish feature <name>
 --
@@ -252,7 +252,7 @@ keeplocal!             Keep the local branch
 D,[no]force_delete     Force delete feature branch after finish
 S,[no]squash           Squash feature during merge
 no-ff!                 Never fast-forward during the merge
-m,mergereq	       Do not merge feature but make a merge request
+M,mergereq	       Do not merge feature but make a merge request
 "
 	local finish_base
 
@@ -268,7 +268,7 @@ m,mergereq	       Do not merge feature but make a merge request
 	DEFINE_boolean 'squash' false "squash feature during merge" S
 	DEFINE_boolean 'squash-info' false "add branch info during squash"
 	DEFINE_boolean 'no-ff!' false "Don't fast-forward ever during merge "
-	DEFINE_boolean 'mergereq' false "Don't merge, but make a merge request in gitlab" m
+	DEFINE_boolean 'mergereq' false "Don't merge, but make a merge request in gitlab" M
 
 	# Override defaults with values from config
 	gitflow_override_flag_boolean   "feature.finish.fetch"             "fetch"
@@ -394,7 +394,7 @@ m,mergereq	       Do not merge feature but make a merge request
 	    echo "Keeping branches until merge request approuved."
 	    echo "Commit in '$BRANCH' to update the merge resquest"
 	    echo "After merge request approuval, use 'git flow finish'"
-	    echo " (wihtout -m) and 'git pull' to really finish the feature"
+	    echo " (wihtout -M) and 'git pull' to really finish the feature"
 	else
 
 	   # Merge into BASE
