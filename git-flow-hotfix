@@ -361,7 +361,7 @@ showcommands!     Show git commands while executing them
 
 cmd_finish() {
 	OPTIONS_SPEC="\
-git flow hotfix finish [-h] [-F] [-s] [-u] [-m | -f ] [-p] [-k] [-n] [-b] [-S] <version>
+git flow hotfix finish [-h] [-M] [-F] [-s] [-u] [-m | -f ] [-p] [-k] [-n] [-b] [-S] <version>
 
 Finish hotfix branch <version>
 --
@@ -381,6 +381,7 @@ n,[no]notag           Don't tag this hotfix
 b,[no]nobackmerge     Don't back-merge master, or tag if applicable, in develop
 S,[no]squash          Squash hotfix during merge
 T,tagname!            Use given tag name
+M,mergereq	       Do not merge feature but make a merge request
 "
 	local opts commit keepmsg remotebranchdeleted localbranchdeleted
 
@@ -400,6 +401,7 @@ T,tagname!            Use given tag name
 	DEFINE_boolean 'squash' false "squash release during merge" S
 	DEFINE_boolean 'squash-info' false "add branch info during squash"
 	DEFINE_string  'tagname' "" "use the given tag name" T
+	DEFINE_boolean 'mergereq' false "Don't merge, but make a merge request in gitlab" M
 
 	# Override defaults with values from config
 	gitflow_override_flag_boolean   "hotfix.finish.fetch"          "fetch"
@@ -416,6 +418,7 @@ T,tagname!            Use given tag name
 	gitflow_override_flag_string    "hotfix.finish.signingkey"     "signingkey"
 	gitflow_override_flag_string    "hotfix.finish.message"        "message"
 	gitflow_override_flag_string    "hotfix.finish.messagefile"    "messagefile"
+	gitflow_override_flag_boolean   "hotfix.finish.mergereq"          "mergereq"
 
 	# Parse arguments
 	parse_args "$@"
@@ -517,6 +520,17 @@ T,tagname!            Use given tag name
 	# In case a previous attempt to finish this release branch has failed,
 	# but the merge into BASE was successful, we skip it now
 	if ! git_is_branch_merged_into "$BRANCH" "$BASE_BRANCH"; then
+	    if flag mergereq; then
+		git_do commit --allow-empty -m "finishing $BRANCH"
+		git_do push -o merge_request.create  -o merge_request.target="$BASE_BRANCH" "$ORIGIN" "$BRANCH"
+		echo "Finish by creating a merge request."
+		echo "Keeping branches until merge request approuved."
+		echo "Commit in '$BRANCH' to update the merge resquest"
+		echo "***After*** merge request approuval, use 'git flow finish -M' to continue"
+		echo " if the base branch is not master"
+		exit 4
+	    else
+
 		git_do checkout "$BASE_BRANCH" || die "Could not check out branch '$BASE_BRANCH'."
 		if noflag squash; then
 			git_do merge --no-ff "$BRANCH" || die "There were merge conflicts." # TODO: What do we do now?
@@ -525,13 +539,15 @@ T,tagname!            Use given tag name
 			flag squash_info && gitflow_create_squash_message "Merged hotfix branch '$BRANCH'" "$BASE_BRANCH" "$BRANCH" > "$DOT_GIT_DIR/SQUASH_MSG"
 			git_do commit
 		fi
+	    fi
 	fi
 
 	if noflag notag; then
 		# Try to tag the release.
 		# In case a previous attempt to finish this release branch has failed,
 		# but the tag was set successful, we skip it now
-		if ! git_tag_exists "$VERSION_PREFIX$TAGNAME"; then
+	    if ! git_tag_exists "$VERSION_PREFIX$TAGNAME"; then
+		git_do checkout "$BASE_BRANCH" || die "Could not check out branch '$BASE_BRANCH'."
 			if [ "$FLAGS_message" != "" ] && [ "$FLAGS_messagefile" != "" ]; then
 				die "Use either -m,--message or -f,--messagefile. Can not use both options at the same time"
 			fi
@@ -561,7 +577,12 @@ T,tagname!            Use given tag name
 		# In case a previous attempt to finish this release branch has failed,
 		# but the merge into develop was successful, we skip it now
 		if ! git_is_branch_merged_into "$MERGE_BRANCH" "$DEVELOP_BRANCH"; then
-			git_do checkout "$DEVELOP_BRANCH" || die "Could not check out branch '$DEVELOP_BRANCH'."
+		    if flag mergereq; then
+			# Checkout the hotfix branch
+			git_do checkout "$BRANCH" || die "Could not check out branch '$BRANCH'."
+		    else
+  			git_do checkout "$DEVELOP_BRANCH" || die "Could not check out branch '$DEVELOP_BRANCH'."
+		    fi
 
 			if noflag nobackmerge; then
 				# Accounting for 'git describe', if a release is tagged
@@ -574,8 +595,17 @@ T,tagname!            Use given tag name
 			else
 				commit="$BRANCH"
 			fi
-
 			git_do merge --no-ff "$commit" || die "There were merge conflicts."
+			if flag mergereq; then
+			    # OK, we have merge master/tag branch to release, time to make a merge request in develop
+			    git_do push -o merge_request.create  -o merge_request.target="$DEVELOP_BRANCH" "$ORIGIN" "$BRANCH"
+			    echo "Finish by creating a merge request to develop (backmerging)."
+			    echo "Keeping branches until merge request approuved."
+			    echo "Commit in '$BRANCH' to update the merge resquest"
+			    echo "After merge request approuval, use 'git flow finish'"
+			    echo " (wihtout -M) and 'git pull' to really finish the release"
+			    exit 4
+			fi
 			# TODO: What do we do now?
 		fi
 	fi
