@@ -481,6 +481,17 @@ M,mergereq	       Do not merge feature but make a merge request
 			require_branches_equal "$DEVELOP_BRANCH" "$ORIGIN/$DEVELOP_BRANCH"
 		fi
 	fi
+	if flag mergereq; then
+	    # pull remote to update if a merge request has been accepted
+	    # The Master branch
+	    git_do checkout "$BASE_BRANCH"
+	    git_do pull
+	    # The devel branch
+	    git_do checkout "$DEVELOP_BRANCH"
+	    git_do pull
+	    # checkout the release branch
+	    git_do checkout "$BRANCH"
+	fi
 
 	# If the branch is already merged there is no need to check the hotfix branch
 	# This can happen when the merge in develop fails and we rerun the finish.
@@ -527,7 +538,6 @@ M,mergereq	       Do not merge feature but make a merge request
 		echo "Keeping branches until merge request approuved."
 		echo "Commit in '$BRANCH' to update the merge resquest"
 		echo "***After*** merge request approuval, use 'git flow finish -M' to continue"
-		echo " if the base branch is not master"
 		exit 4
 	    else
 
